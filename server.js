@@ -11,7 +11,7 @@ const DIRECTUS_TOKEN = process.env.DIRECTUS_TOKEN;
 
 function jsonRequest(options, body) {
   return new Promise((resolve, reject) => {
-    const req = https.request(options, res => {
+    const req = https.request(options, res => {h
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
@@ -106,7 +106,7 @@ ${historyContext ? '\nПРЕДЫДУЩИЕ СМЕТЫ (используй для
         'anthropic-version': '2023-06-01'
       }
     }, {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     });
