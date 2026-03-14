@@ -11,7 +11,7 @@ const DIRECTUS_TOKEN = process.env.DIRECTUS_TOKEN;
 
 function jsonRequest(options, body) {
   return new Promise((resolve, reject) => {
-    const req = https.request(options, res => {h
+    const req = https.request(options, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
