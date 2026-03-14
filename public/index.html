@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polako Hedonist — Генератор смет</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Space+Mono:wght@400;700&display=swap');
+
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+    @page { margin: 12mm; size: A4; }
+    body { background: white !important; margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 10pt; color: #1a1a18; }
+    header { display: none !important; }
+    .layout { display: block !important; }
+    .panel { border: none !important; padding: 0 !important; }
+    .panel:first-child { display: none !important; }
+    #thinkingBlock { display: none !important; }
+    #estimateEmpty { display: none !important; }
+    #estimateContent { display: block !important; }
+    .export-row { display: none !important; }
+    .add-service-row { display: none !important; }
+    .discount-row { display: none !important; }
+    .remove-btn { display: none !important; }
+    .estimate-client { font-size: 16pt !important; font-weight: bold; margin-bottom: 4px; }
+    .estimate-date { font-size: 9pt !important; color: #666; }
+    .estimate-header { margin-bottom: 12px; }
+    .tag { background: #333 !important; color: white !important; font-size: 8pt !important; padding: 2px 6px !important; border-radius: 10px; display: inline-block; margin: 2px; }
+    .col-heads { font-size: 8pt !important; color: #888 !important; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-top: 6px; }
+    .section-header { background: #e8e8e8 !important; color: #333 !important; font-size: 8pt !important; padding: 3px 6px !important; margin-top: 6px !important; border: none !important; letter-spacing: 0.05em; }
+    .item-row { border-bottom: 1px solid #eee !important; padding: 4px 0 !important; page-break-inside: avoid; }
+    .item-name { font-size: 9pt !important; }
+    .item-name .comment { font-size: 8pt !important; color: #888; }
+    .item-input { border: none !important; background: transparent !important; font-size: 9pt !important; text-align: center; width: auto !important; padding: 0 !important; }
+    .item-price-display { font-size: 10pt !important; font-weight: bold; }
+    .total-row { border-top: 2px solid #b8860b !important; margin-top: 10px !important; padding-top: 8px !important; }
+    .total-label { font-size: 9pt !important; color: #888; }
+    .total-amount { font-size: 22pt !important; color: #b8860b !important; }
+    .total-rsd { font-size: 11pt !important; color: #888; }
+    #printHeader { display: block !important; }
+    #printFooter { display: block !important; }
+  }
+
+  #printHeader { display: none; }
+  #printFooter { display: none; }
+
+
+  :root {
+    --cream: #f5f0e8;
+    --dark: #1a1a18;
+    --accent: #b8860b;
+    --accent2: #8b6914;
+    --muted: #7a7468;
+    --border: #d4c9b0;
+    --card: #faf7f0;
+    --red: #c0392b;
+    --green: #2d6a4f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--dark);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--dark);
+    color: var(--cream);
+    padding: 28px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+  }
+
+  header span {
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: calc(100vh - 85px);
+  }
+
+  .panel {
+    padding: 32px 36px;
+    border-right: 1px solid var(--border);
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-title .num {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    background: var(--accent);
+    color: var(--cream);
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-weight: 700;
+  }
+
+  label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    margin-top: 18px;
+  }
+
+  label:first-of-type { margin-top: 0; }
+
+  textarea, input, select {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--dark);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    border-radius: 2px;
+  }
+
+  textarea:focus, input:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 130px;
+    line-height: 1.6;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: var(--cream);
+    border: none;
+    padding: 12px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    border-radius: 2px;
+    margin-top: 20px;
+  }
+
+  .btn:hover { background: var(--accent2); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-outline:hover { background: var(--accent); color: var(--cream); }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 6px 12px;
+    font-size: 10px;
+    margin-top: 0;
+  }
+
+  .btn-danger:hover { background: var(--red); color: white; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(245,240,232,0.3);
+    border-top-color: var(--cream);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Right panel — estimate */
+  .estimate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+  }
+
+  .estimate-client {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-style: italic;
+    color: var(--dark);
+  }
+
+  .estimate-date {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .estimate-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--muted);
+    text-align: center;
+    gap: 12px;
+  }
+
+  .estimate-empty .icon {
+    font-size: 48px;
+    opacity: 0.3;
+  }
+
+  .estimate-empty p {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-style: italic;
+  }
+
+  /* Items table */
+  .section-header {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    padding: 8px 0 6px;
+    border-bottom: 1px solid var(--border);
+    margin-top: 20px;
+    margin-bottom: 4px;
+  }
+
+  .section-header:first-child { margin-top: 0; }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: 1fr 90px 70px 70px 36px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #ede8dc;
+  }
+
+  .item-name {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .item-name .comment {
+    font-size: 10px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  .item-input {
+    padding: 4px 8px;
+    font-size: 12px;
+    text-align: center;
+    background: var(--cream);
+    border: 1px solid var(--border);
+  }
+
+  .item-price-display {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    text-align: right;
+    color: var(--dark);
+  }
+
+  .col-heads {
+    display: grid;
+    grid-template-columns: 1fr 90px 70px 70px 36px;
+    gap: 8px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 0 4px;
+    margin-top: 8px;
+  }
+
+  .col-heads span { text-align: center; }
+  .col-heads span:nth-child(3) { text-align: right; }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 2px solid var(--accent);
+  }
+
+  .total-label {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .total-amount {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .total-rsd {
+    font-size: 14px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .export-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  /* Thinking block */
+  .thinking-block {
+    background: var(--dark);
+    color: #aaa;
+    padding: 16px 20px;
+    border-radius: 2px;
+    font-size: 11px;
+    line-height: 1.7;
+    margin-top: 20px;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .thinking-block strong {
+    color: var(--accent);
+    display: block;
+    margin-bottom: 8px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .remove-btn {
+    background: none;
+    border: 1px solid #ddd;
+    color: var(--muted);
+    width: 28px; height: 28px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 2px;
+    line-height: 1;
+    padding: 0;
+  }
+
+  .remove-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .add-service-row {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .add-service-row select { flex: 1; }
+
+  .discount-row {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .discount-row label {
+    margin: 0;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+
+  .discount-row input {
+    width: 80px;
+  }
+
+  .tag-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .tag {
+    background: var(--dark);
+    color: var(--cream);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+  }
+
+  /* History panel */
+  .history-panel {
+    border-top: 1px solid var(--border);
+    margin-top: 28px;
+    padding-top: 20px;
+  }
+
+  .history-title {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .history-count {
+    background: var(--accent);
+    color: var(--cream);
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .history-item:hover { border-color: var(--accent); background: #fdf8ee; }
+
+  .history-item-info { min-width: 0; }
+
+  .history-item-client {
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-item-meta {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .history-item-total {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .history-delete {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    line-height: 1;
+  }
+
+  .history-delete:hover { color: var(--red); }
+
+  .history-empty {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+    padding: 8px 0;
+  }
+
+  .saved-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--green);
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .saved-indicator.show { opacity: 1; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Polako Hedonist</h1>
+  <span>// генератор смет</span>
+</header>
+
+<div class="layout">
+  <!-- Left: Input -->
+  <div class="panel">
+    <div class="panel-title">
+      <span class="num">01</span>
+      Описание задачи
+    </div>
+
+    <label>Название клиента / мероприятия</label>
+    <input type="text" id="clientName" placeholder="Например: Ресторан Magnolia, Корпоратив Tech Hub..." />
+
+    <label>Описание в свободной форме</label>
+    <textarea id="taskDesc" placeholder="Опиши, что нужно клиенту. Например: Нужно продвижение нового ресторана. Хотим публикацию в инстаграм и телеграм, таргет на 2 недели, фото-съёмку и флаеры для раздачи на 500 штук..."></textarea>
+
+    <label>Дополнительные пожелания (необязательно)</label>
+    <input type="text" id="extraNotes" placeholder="Скидка 20%, только русский аккаунт, бюджет до 50 000 rsd..." />
+
+    <button class="btn" id="generateBtn" onclick="generateEstimate()">
+      <span id="btnIcon">✦</span>
+      <span id="btnText">Сгенерировать смету</span>
+    </button>
+    <div id="servicesStatus" style="font-size:10px;color:var(--muted);margin-top:8px;">⏳ Загрузка услуг из Directus...</div>
+
+    
+    <div class="saved-indicator" id="savedIndicator">✓ Смета сохранена в историю</div>
+
+    <div class="history-panel">
+      <div class="history-title">
+        История смет
+        <span class="history-count" id="historyCount">0</span>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">Сгенерированные сметы появятся здесь</div>
+      </div>
+    </div>
+
+    <div id="thinkingBlock" style="display:none" class="thinking-block">
+      <strong>Анализ задачи...</strong>
+      <span id="thinkingText"></span>
+    </div>
+  </div>
+
+  <!-- Right: Estimate -->
+  <div class="panel">
+    <div class="panel-title">
+      <span class="num">02</span>
+      Смета
+    </div>
+
+    <div id="estimateEmpty" class="estimate-empty">
+      <div class="icon">◈</div>
+      <p>Опишите задачу и нажмите «Сгенерировать»</p>
+    </div>
+
+    <div id="estimateContent" style="display:none">
+
+      <!-- Print only header -->
+      <div id="printHeader" style="margin-bottom:12px; border-bottom:3px solid #b8860b; padding-bottom:10px;">
+        <img src="data:image/png;base64,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" style="height:45px;" alt="Polako Hedonist" />
+        <div style="font-size:8pt; color:#888; margin-top:4px;">Условия актуальны в 2026 году</div>
+      </div>
+
+      <!-- Print only footer -->
+      <div id="printFooter" style="margin-top:16px; border-top:1px solid #ddd; padding-top:10px; font-size:8pt; color:#555;">
+        <div style="display:flex; justify-content:space-between;">
+          <div>
+            <div>Оплата на русский счет в ТБанке: <strong>79214453878</strong></div>
+            <div>Оплата на сербский физ. счет: <strong>265000000677686045 / IRYNA SPIRYDONAVA</strong></div>
+            <div>Оплата на сербский юр. счет — по запросу (счет-фактура)</div>
+          </div>
+          <div style="text-align:right;">
+            <div><strong>Контакты:</strong></div>
+            <div>Telegram: @polakohedonistadmin</div>
+            <div>Tel. +381 61 6074651</div>
+          </div>
+        </div>
+      </div>
+      <div class="estimate-header">
+        <div>
+          <div class="estimate-client" id="displayClientName"></div>
+          <div class="tag-list" id="tagList"></div>
+        </div>
+        <div class="estimate-date" id="estimateDate"></div>
+      </div>
+
+      <div class="col-heads">
+        <span>Услуга</span>
+        <span>Цена, rsd</span>
+        <span>Кол-во</span>
+        <span style="text-align:right">Сумма</span>
+        <span></span>
+      </div>
+
+      <div id="itemsContainer"></div>
+
+      <!-- Add service manually -->
+      <div class="add-service-row">
+        <select id="addServiceSelect">
+          <option value="">+ Добавить услугу вручную...</option>
+        </select>
+        <button class="btn btn-outline" style="margin-top:0; padding: 8px 14px; font-size:11px" onclick="addServiceManually()">Добавить</button>
+      </div>
+
+      <div class="discount-row">
+        <label>Скидка на всё, %</label>
+        <input type="number" id="globalDiscount" value="0" min="0" max="100" style="width:80px" oninput="recalcTotal()" />
+        <label>Комментарий к смете</label>
+        <input type="text" id="estimateComment" placeholder="Необязательно" style="flex:1" />
+      </div>
+
+      <div class="total-row">
+        <div class="total-label">Итого к оплате</div>
+        <div>
+          <span class="total-amount" id="totalAmount">0</span>
+          <span class="total-rsd">rsd</span>
+        </div>
+      </div>
+
+      <div class="export-row">
+        <button class="btn" onclick="exportExcel(event)">↓ Скачать Excel</button>
+        <button class="btn btn-outline" onclick="exportPDF()">↓ Скачать PDF</button>
+        <div id="pdfInstructions" style="display:none;font-size:10px;color:#7a7468;margin-top:6px;width:100%;">📄 Файл .html скачан. Откройте его в браузере и нажмите Ctrl+P → Сохранить как PDF</div>
+        <button class="btn btn-outline" onclick="generateEstimate()">↺ Пересоздать</button>
+      </div>
+          <div style="text-align:right; font-size:9pt;">
+            <div><strong>Контакты:</strong></div>
+            <div>Telegram: @polakohedonistadmin</div>
+            <div>Tel. +381 61 6074651</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ===== BACKEND CONFIG =====
+// Все секретные ключи хранятся на бэкенде Railway, здесь только URL
+const BACKEND_URL = window.BACKEND_URL || '';  // устанавливается при встраивании на сайт
+
+let SERVICES = [];
+let currentItems = [];
+
+// Load services via backend
+async function loadServices() {
+  const statusEl = document.getElementById('servicesStatus');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/services`);
+    const data = await res.json();
+    if (!data.data) throw new Error('Нет данных');
+
+    SERVICES = data.data;
+
+    if (statusEl) statusEl.textContent = `✓ Загружено ${SERVICES.length} услуг`;
+    populateAddSelect();
+  } catch(e) {
+    console.error('Ошибка загрузки услуг:', e);
+    if (statusEl) statusEl.textContent = '⚠ Ошибка загрузки услуг: ' + e.message;
+  }
+}
+
+// Populate add-service dropdown
+function populateAddSelect() {
+  const sel = document.getElementById('addServiceSelect');
+  const cats = {};
+  SERVICES.forEach(s => {
+    if (!cats[s.category]) cats[s.category] = [];
+    cats[s.category].push(s);
+  });
+  sel.innerHTML = '<option value="">+ Добавить услугу вручную...</option>';
+  Object.entries(cats).forEach(([cat, items]) => {
+    const og = document.createElement('optgroup');
+    og.label = cat;
+    items.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify(s);
+      opt.textContent = s.name + (s.price ? ` — ${s.price} rsd` : '');
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+}
+
+// Start loading on page load
+loadServices();
+
+function addServiceManually() {
+  const sel = document.getElementById('addServiceSelect');
+  if (!sel.value) return;
+  const svc = JSON.parse(sel.value);
+  currentItems.push({ ...svc, qty: 1, discount: 0 });
+  sel.value = '';
+  renderItems();
+  recalcTotal();
+}
+
+async function generateEstimate() {
+  const client = document.getElementById('clientName').value.trim();
+  const desc = document.getElementById('taskDesc').value.trim();
+  const extra = document.getElementById('extraNotes').value.trim();
+
+  if (!desc) { alert('Пожалуйста, опишите задачу'); return; }
+
+  // Load history for context
+  const historyContext = await loadHistoryForContext();
+
+  const btn = document.getElementById('generateBtn');
+  const btnIcon = document.getElementById('btnIcon');
+  const btnText = document.getElementById('btnText');
+  btn.disabled = true;
+  btnIcon.innerHTML = '<div class="spinner"></div>';
+  btnText.textContent = 'Анализирую...';
+
+  const thinkingBlock = document.getElementById('thinkingBlock');
+  const thinkingText = document.getElementById('thinkingText');
+  thinkingBlock.style.display = 'block';
+  thinkingText.textContent = 'Подбираю подходящие услуги...';
+
+  try {
+    const prompt = `Ты — специалист рекламного агентства Polako Hedonist. Тебе нужно составить смету для клиента на основе его описания.
+
+СПИСОК ДОСТУПНЫХ УСЛУГ (JSON):
+${JSON.stringify(SERVICES)}
+
+ЗАПРОС КЛИЕНТА:
+Клиент: ${client || 'не указан'}
+Описание: ${desc}
+${extra ? 'Дополнительно: ' + extra : ''}
+
+ЗАДАЧА: Подбери подходящие услуги из списка и верни JSON со следующей структурой:
+{
+  "tags": ["список ключевых слов о задаче, 2-4 слова"],
+  "thinking": "краткое объяснение логики подбора (1-3 предложения)",
+  "items": [
+    {
+      "category": "категория",
+      "name": "точное название услуги из списка",
+      "price": число,
+      "qty": число (сколько раз / штук),
+      "comment": "краткий комментарий почему выбрана эта услуга",
+      "discount": 0
+    }
+  ]
+}
+
+${historyContext ? `\nПРЕДЫДУЩИЕ СМЕТЫ (используй для понимания паттернов и типичных наборов услуг):\n${historyContext}` : ''}
+
+Правила:
+- Выбирай только услуги из списка, не придумывай новые
+- На услугу «Выставление таргета» скидка НИКОГДА не применяется (discount всегда 0)
+- qty должен быть разумным (например таргет на 14 дней = qty:14)
+- Если в описании упоминаются конкретные числа — используй их
+- Учитывай паттерны из предыдущих смет для похожих задач
+- Подбирай 3-10 услуг, не больше
+- Отвечай ТОЛЬКО JSON, без пояснений и markdown`;
+
+    const response = await fetch(`${BACKEND_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client,
+        desc,
+        extra,
+        services: SERVICES,
+        historyContext
+      })
+    });
+
+    const parsed = await response.json();
+    if (!response.ok) throw new Error(parsed.error || 'Ошибка сервера');
+
+    thinkingText.textContent = parsed.thinking || '';
+
+    currentItems = parsed.items || [];
+    
+    // Show estimate
+    document.getElementById('estimateEmpty').style.display = 'none';
+    document.getElementById('estimateContent').style.display = 'block';
+    document.getElementById('displayClientName').textContent = client || 'Клиент';
+    document.getElementById('estimateDate').innerHTML = `Дата: ${new Date().toLocaleDateString('ru-RU')}<br><span style="color:var(--muted)">Polako Hedonist</span>`;
+    document.getElementById('globalDiscount').value = 0;
+    const globalDiscountVal = 0;
+
+    // Tags
+    const tagList = document.getElementById('tagList');
+    tagList.innerHTML = (parsed.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+
+    renderItems();
+    recalcTotal();
+
+    // Save to history
+    await saveToHistory(client, parsed.tags || [], currentItems, globalDiscountVal);
+
+  } catch(e) {
+    thinkingText.textContent = 'Ошибка: ' + e.message;
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btnIcon.textContent = '✦';
+    btnText.textContent = 'Сгенерировать смету';
+  }
+}
+
+function renderItems() {
+  const container = document.getElementById('itemsContainer');
+  if (!currentItems.length) { container.innerHTML = ''; return; }
+
+  // Group by category
+  const cats = {};
+  currentItems.forEach((item, idx) => {
+    const cat = item.category || 'Прочее';
+    if (!cats[cat]) cats[cat] = [];
+    cats[cat].push({ ...item, _idx: idx });
+  });
+
+  let html = '';
+  for (const [cat, items] of Object.entries(cats)) {
+    html += `<div class="section-header">${cat}</div>`;
+    items.forEach(item => {
+      const total = item.price * item.qty * (1 - (item.discountAllowed === false ? 0 : (item.discount || 0)) / 100);
+      html += `
+        <div class="item-row" data-idx="${item._idx}">
+          <div class="item-name">
+            ${escHtml(item.name)}
+            ${item.comment ? `<div class="comment">${escHtml(item.comment)}</div>` : ''}
+          </div>
+          <input class="item-input" type="number" value="${item.price}" min="0" 
+            onchange="updateItem(${item._idx},'price',this.value)" />
+          <input class="item-input" type="number" value="${item.qty}" min="1" 
+            onchange="updateItem(${item._idx},'qty',this.value)" />
+          <div class="item-price-display">${Math.round(total).toLocaleString('ru-RU')}</div>
+          <button class="remove-btn" onclick="removeItem(${item._idx})" title="Удалить">×</button>
+        </div>`;
+    });
+  }
+  container.innerHTML = html;
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateItem(idx, field, val) {
+  currentItems[idx][field] = field === 'price' || field === 'qty' ? parseFloat(val) || 0 : val;
+  recalcTotal();
+  // Re-render just totals without full redraw to preserve focus
+  const rows = document.querySelectorAll('.item-row');
+  rows.forEach(row => {
+    const i = parseInt(row.dataset.idx);
+    const item = currentItems[i];
+    if (item) {
+      const total = item.price * item.qty * (1 - (item.discountAllowed === false ? 0 : (item.discount || 0)) / 100);
+      row.querySelector('.item-price-display').textContent = Math.round(total).toLocaleString('ru-RU');
+    }
+  });
+}
+
+function removeItem(idx) {
+  currentItems.splice(idx, 1);
+  renderItems();
+  recalcTotal();
+}
+
+function recalcTotal() {
+  const globalDiscount = parseFloat(document.getElementById('globalDiscount').value) || 0;
+  let total = 0;
+  currentItems.forEach(item => {
+    const canDiscount = item.discountAllowed !== false;
+    const lineDisc = canDiscount ? (item.discount || 0) : 0;
+    total += item.price * item.qty * (1 - lineDisc / 100);
+  });
+  const nonDiscountTotal = currentItems.reduce((s, item) => {
+    return s + (item.discountAllowed === false ? item.price * item.qty : 0);
+  }, 0);
+  const discountableTotal = currentItems.reduce((s, item) => {
+    return s + (item.discountAllowed !== false ? item.price * item.qty * (1 - (item.discount||0)/100) : 0);
+  }, 0);
+  total = discountableTotal * (1 - globalDiscount / 100) + nonDiscountTotal;
+  document.getElementById('totalAmount').textContent = Math.round(total).toLocaleString('ru-RU');
+}
+
+const LOGO_B64 = "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";
+
+
+// ===== HISTORY STORAGE =====
+
+async function saveToHistory(client, tags, items, globalDiscount) {
+  try {
+    const globalDisc = globalDiscount || 0;
+    let total = 0;
+    const noDiscAmt = items.reduce((s,i) => s + (i.discountAllowed === false ? i.price*i.qty : 0), 0);
+    const discAmt = items.reduce((s,i) => s + (i.discountAllowed !== false ? i.price*i.qty*(1-(i.discount||0)/100) : 0), 0);
+    total = Math.round(discAmt * (1 - globalDisc / 100) + noDiscAmt);
+
+    const entry = {
+      id: Date.now(),
+      client: client || 'Клиент',
+      tags,
+      items,
+      globalDiscount: globalDisc,
+      total,
+      date: new Date().toLocaleDateString('ru-RU'),
+      desc: document.getElementById('taskDesc').value.trim().substring(0, 120),
+    };
+
+    // Load existing list
+    let list = [];
+    try {
+      const res = await window.storage.get('estimates:list');
+      if (res) list = JSON.parse(res.value);
+    } catch(e) {}
+
+    list.unshift(entry);
+    if (list.length > 50) list = list.slice(0, 50); // keep max 50
+
+    await window.storage.set('estimates:list', JSON.stringify(list));
+
+    // Also save to Directus via backend
+    try {
+      await fetch(`${BACKEND_URL}/api/estimates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_name: entry.client,
+          status: 'draft',
+          total_amount: entry.total,
+          global_discount: entry.globalDiscount,
+          comment: entry.desc,
+          items: entry.items,
+          tags: entry.tags
+        })
+      });
+    } catch(e) {
+      console.warn('Could not save to Directus:', e);
+    }
+
+    showSavedIndicator();
+    await renderHistory();
+  } catch(e) {
+    console.warn('Could not save to history:', e);
+  }
+}
+
+async function loadHistory() {
+  try {
+    const res = await window.storage.get('estimates:list');
+    if (res) return JSON.parse(res.value);
+  } catch(e) {}
+  return [];
+}
+
+async function loadHistoryForContext() {
+  const list = await loadHistory();
+  if (!list.length) return null;
+  // Send last 8 estimates as context
+  const recent = list.slice(0, 8);
+  return recent.map(e => {
+    const lines = e.items.map(i => `  - ${i.name} x${i.qty} = ${Math.round(i.price * i.qty)} rsd`).join('\n');
+    return `[${e.date}] ${e.client} (${e.tags.join(', ')}) — ${e.total} rsd:\n${lines}`;
+  }).join('\n\n');
+}
+
+async function renderHistory() {
+  const list = await loadHistory();
+  const container = document.getElementById('historyList');
+  const countEl = document.getElementById('historyCount');
+  countEl.textContent = list.length;
+
+  if (!list.length) {
+    container.innerHTML = '<div class="history-empty">Сгенерированные сметы появятся здесь</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(entry => `
+    <div class="history-item" onclick="loadFromHistory(${entry.id})">
+      <div class="history-item-info">
+        <div class="history-item-client">${escHtml(entry.client)}</div>
+        <div class="history-item-meta">${entry.date} · ${escHtml((entry.tags || []).join(', '))}</div>
+      </div>
+      <div class="history-item-total">${entry.total.toLocaleString('ru-RU')} rsd</div>
+      <button class="history-delete" onclick="event.stopPropagation(); deleteFromHistory(${entry.id})" title="Удалить">×</button>
+    </div>
+  `).join('');
+}
+
+async function loadFromHistory(id) {
+  const list = await loadHistory();
+  const entry = list.find(e => e.id === id);
+  if (!entry) return;
+
+  document.getElementById('clientName').value = entry.client;
+  document.getElementById('taskDesc').value = entry.desc || '';
+  document.getElementById('globalDiscount').value = entry.globalDiscount || 0;
+
+  currentItems = entry.items.map(i => ({ ...i }));
+
+  document.getElementById('estimateEmpty').style.display = 'none';
+  document.getElementById('estimateContent').style.display = 'block';
+  document.getElementById('displayClientName').textContent = entry.client;
+  document.getElementById('estimateDate').innerHTML = `Дата: ${entry.date}<br><span style="color:var(--muted)">Polako Hedonist</span>`;
+
+  const tagList = document.getElementById('tagList');
+  tagList.innerHTML = (entry.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
+
+  renderItems();
+  recalcTotal();
+
+  // Scroll to estimate
+  document.querySelector('.layout').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function deleteFromHistory(id) {
+  let list = await loadHistory();
+  list = list.filter(e => e.id !== id);
+  await window.storage.set('estimates:list', JSON.stringify(list));
+  await renderHistory();
+}
+
+function showSavedIndicator() {
+  const el = document.getElementById('savedIndicator');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+renderHistory();
+
+async function exportExcel(event) {
+  const btn = event ? event.target.closest('button') : null;
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '⏳ Создаю...'; btn.disabled = true; }
+  try {
+    _doExport();
+  } catch(e) {
+    alert('Ошибка экспорта: ' + e.message);
+    console.error(e);
+  } finally {
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+  }
+}
+
+function _doExport() {
+  const client = document.getElementById('displayClientName').textContent || 'Клиент';
+  const subtitle = document.getElementById('estimateComment').value;
+  const globalDiscount = parseFloat(document.getElementById('globalDiscount').value) || 0;
+  const dateStr = new Date().toLocaleDateString('ru-RU');
+
+  if (!currentItems.length) { alert('Нет услуг в смете'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const rows = [];
+
+  // Header rows
+  rows.push(['']);
+  rows.push(['', 'Условия актуальны в 2026 году']);
+  rows.push(['']);
+  rows.push(['']);
+  rows.push(['Предложение по рекламному продвижению от Polako Hedonist']);
+  rows.push([subtitle || client]);
+  rows.push(['']);
+  rows.push(['Услуга', 'Цена, rsd', 'Количество', 'Время', 'Скидка, %', 'Комментарий']);
+
+  // Group by category
+  const cats = {};
+  currentItems.forEach(item => {
+    const c = item.category || 'Прочее';
+    if (!cats[c]) cats[c] = [];
+    cats[c].push(item);
+  });
+
+  let total = 0;
+  for (const [cat, items] of Object.entries(cats)) {
+    rows.push([cat, '', '', '', '', '']);
+    items.forEach(item => {
+      const disc = item.discountAllowed === false ? 0 : Math.min((item.discount || 0) + globalDiscount, 100);
+      const lineTotal = Math.round(item.price * (item.qty || 1) * (1 - disc / 100));
+      total += lineTotal;
+      rows.push([
+        item.name,
+        lineTotal,
+        item.qty || 1,
+        item.duration || '',
+        disc > 0 ? disc : '',
+        item.comment || ''
+      ]);
+    });
+  }
+
+  rows.push(['Итого:', total, '', '', '', '']);
+  rows.push(['']);
+  rows.push(['Дата:', '', '', '', '', 'Контакты:']);
+  rows.push([dateStr, '', '', '', '', 'Telegram: @polakohedonistadmin']);
+  rows.push(['', '', '', '', '', 'Tel. +381 61 6074651']);
+  rows.push(['Оплата на русский счет в ТБанке по номеру телефона', '79214453878', '', '', '', '']);
+  rows.push(['Оплата на сербский физический счет по реквизитам', '265000000677686045 / IRYNA SPIRYDONAVA', '', '', '', '']);
+  rows.push(['Оплата на сербский юридический счет формируется по запросу счет-фактура', '', '', '', '', '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:55},{wch:14},{wch:12},{wch:10},{wch:10},{wch:35}];
+
+  const sheetName = client.replace(/[\/*?:\[\]]/g, '').substring(0, 31) || 'Смета';
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  // Use blob + link instead of XLSX.writeFile (works inside iframes)
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Смета_' + client + '_' + dateStr.replace(/\./g, '-') + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
+function exportPDF() {
+  if (!currentItems.length) { alert('Нет услуг в смете'); return; }
+
+  const client = document.getElementById('displayClientName').textContent || 'Клиент';
+  const dateStr = new Date().toLocaleDateString('ru-RU');
+  const globalDiscount = parseFloat(document.getElementById('globalDiscount').value) || 0;
+
+  const cats = {};
+  currentItems.forEach(item => {
+    const c = item.category || 'Прочее';
+    if (!cats[c]) cats[c] = [];
+    cats[c].push(item);
+  });
+
+  let tableRows = '';
+  let total = 0;
+  for (const [cat, items] of Object.entries(cats)) {
+    tableRows += `<tr><td colspan="5" style="background:#e8e8e8;font-weight:bold;padding:5px 8px;font-size:10pt;">${cat}</td></tr>`;
+    items.forEach(item => {
+      const disc = item.discountAllowed === false ? 0 : Math.min((item.discount || 0) + globalDiscount, 100);
+      const lineTotal = Math.round(item.price * (item.qty || 1) * (1 - disc / 100));
+      total += lineTotal;
+      tableRows += `<tr>
+        <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:9pt;">${item.name}${item.comment ? '<br><span style="color:#888;font-size:8pt;">'+item.comment+'</span>' : ''}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;font-size:9pt;">${lineTotal.toLocaleString('ru-RU')}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;font-size:9pt;">${item.qty || 1}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;font-size:9pt;">${item.duration || ''}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;font-size:9pt;">${disc > 0 ? disc + '%' : ''}</td>
+      </tr>`;
+    });
+  }
+
+  const logoSrc = 'data:image/png;base64,' + LOGO_B64;
+
+  const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Смета — ${client}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:10pt;color:#1a1a18;padding:15mm;}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#e8e8e8;padding:6px 8px;font-size:9pt;text-align:left;border:1px solid #ddd;}
+  td{border-bottom:1px solid #eee;}
+  @media print{@page{margin:12mm;size:A4;}body{padding:0;}}
+</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #b8860b;padding-bottom:8px;margin-bottom:12px;">
+  <img src="${logoSrc}" style="height:40px;">
+  <div style="text-align:right;font-size:8pt;color:#888;">Условия актуальны в 2026 году<br>${dateStr}</div>
+</div>
+<div style="font-size:14pt;font-weight:bold;margin-bottom:2px;">${client}</div>
+<div style="font-size:9pt;color:#888;margin-bottom:12px;">Предложение по рекламному продвижению от Polako Hedonist</div>
+<table><thead><tr>
+  <th>Услуга</th><th style="text-align:right">Цена, rsd</th>
+  <th style="text-align:center">Кол-во</th><th style="text-align:center">Время</th><th style="text-align:center">Скидка</th>
+</tr></thead><tbody>${tableRows}</tbody></table>
+<div style="border-top:2px solid #b8860b;margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+  <span style="font-size:9pt;color:#888;text-transform:uppercase;">Итого к оплате</span>
+  <span style="font-size:20pt;font-weight:bold;color:#b8860b;">${total.toLocaleString('ru-RU')} rsd</span>
+</div>
+<div style="margin-top:16px;border-top:1px solid #ddd;padding-top:8px;display:flex;justify-content:space-between;font-size:8pt;color:#666;">
+  <div>
+    <div>ТБанк (РФ): <b>79214453878</b></div>
+    <div>Сербский физ. счет: <b>265000000677686045 / IRYNA SPIRYDONAVA</b></div>
+    <div>Сербский юр. счет — по запросу</div>
+  </div>
+  <div style="text-align:right;">
+    <div>Telegram: @polakohedonistadmin</div>
+    <div>Tel. +381 61 6074651</div>
+  </div>
+</div>
+</body></html>`;
+
+  // Download as HTML file — user opens it and prints to PDF
+  const blob = new Blob([htmlContent], {type: 'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Смета_' + client + '_' + dateStr.replace(/\./g,'-') + '.html';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+
+  // Show instructions
+  const msg = document.getElementById('pdfInstructions');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display='none', 8000); }
+}
+</script>
+</body>
+</html>
