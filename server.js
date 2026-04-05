@@ -107,7 +107,7 @@ ${historyContext ? '\nПРЕДЫДУЩИЕ СМЕТЫ (используй для
         'anthropic-version': '2023-06-01'
       }
     }, {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     });
