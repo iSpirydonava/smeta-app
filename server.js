@@ -90,7 +90,8 @@ ${historyContext ? '\nПРЕДЫДУЩИЕ СМЕТЫ (используй для
 Правила:
 - Выбирай только услуги из списка, не придумывай новые
 - qty разумный (таргет 14 дней = qty:14)
-- На услуги с is_discount_applied=false ставь discountAllowed: false
+- Если у услуги discountAllowed=false — обязательно сохрани discountAllowed: false в ответе
+- Услуги связанные с таргетингом/таргетом ВСЕГДА получают discountAllowed: false и discount: 0
 - Подбирай 3-10 услуг
 - Отвечай ТОЛЬКО JSON, без markdown`;
 
@@ -210,16 +211,38 @@ async function handleGetServices(req, res) {
       headers: { 'Authorization': `Bearer ${DIRECTUS_TOKEN}` }
     });
 
+    // Human-readable name overrides for technical Directus names
+    const NAME_MAP = {
+      'Pin 3 days': 'Закреп поста на 3 дня',
+      'Pin 7 days': 'Закреп поста на 7 дней',
+      'Pin 14 days': 'Закреп поста на 14 дней',
+      'Pin 30 days': 'Закреп поста на 30 дней',
+      'Pin 1 day': 'Закреп поста на 1 день',
+      'Repost stories': 'Репост в сторис',
+      'Repost feed': 'Репост в ленту',
+      'Story mention': 'Упоминание в сторис',
+      'Feed post': 'Пост в ленте',
+      'Story post': 'Публикация в сторис',
+    };
+
     // Map to frontend format
-    const services = (result.body.data || []).map(s => ({
-      id: s.id,
-      category: s.category_id?.name || 'Прочее',
-      name: s.name || '',
-      price: parseFloat(s.base_price) || 0,
-      duration: s.duration_type === 'monthly' ? 'в месяц' : '',
-      comment: s.short_description || '',
-      discountAllowed: s.is_discount_applied !== false
-    }));
+    const services = (result.body.data || []).map(s => {
+      const rawName = s.name || '';
+      const displayName = NAME_MAP[rawName] || rawName;
+      const isTarget = rawName.toLowerCase().includes('target') ||
+                       rawName.toLowerCase().includes('таргет') ||
+                       (s.short_description || '').toLowerCase().includes('таргет');
+      return {
+        id: s.id,
+        category: s.category_id?.name || 'Прочее',
+        name: displayName,
+        rawName: rawName,
+        price: parseFloat(s.base_price) || 0,
+        duration: s.duration_type === 'monthly' ? 'в месяц' : '',
+        comment: s.short_description || '',
+        discountAllowed: isTarget ? false : (s.is_discount_applied !== false)
+      };
+    });
 
     send(res, 200, { data: services });
   } catch (e) {
